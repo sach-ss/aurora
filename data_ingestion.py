@@ -1,8 +1,8 @@
 import os
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import OllamaEmbeddings
+from langchain_chroma import Chroma
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,6 +10,7 @@ load_dotenv()
 # --- Configuration ---
 SOURCE_DIRECTORY = "./my_project_code" # Folder containing your source code
 CHROMA_PATH = "vector_store"
+OLLAMA_EMBED_MODEL = "nomic-embed-text" # Local embedding model
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200 
 
@@ -20,8 +21,17 @@ def load_documents(directory: str):
         path=directory, 
         glob="**/*.*", 
         loader_cls=TextLoader,
-        # Exclude common non-code files
-        exclude=["**/*.md", "**/*.txt", "**/*.log", "**/*.jpg", "**/*.jpeg", "**/*.png"]
+        # --- CRITICAL FIX: Specify UTF-8 Encoding ---
+        loader_kwargs={"encoding": "utf-8"}, 
+        # ---------------------------------------------
+        # --- CRITICAL FIX: Exclude binary and cache files ---
+        exclude=[
+            "**/*.md", "**/*.txt", "**/*.log", 
+            "**/*.jpg", "**/*.jpeg", "**/*.png",
+            "**/*.pyc",  # Exclude compiled Python bytecode
+            "**/__pycache__/**" # Exclude all files in cache directories
+        ]
+        # ---------------------------------------------
     )
     documents = loader.load()
     print(f"✅ Loaded {len(documents)} documents.")
@@ -40,15 +50,12 @@ def split_text(documents):
     return chunks
 
 def create_database(chunks):
-    """Generates embeddings using OpenAI and saves them to Chroma."""
-    if "OPENAI_API_KEY" not in os.environ:
-        print("❌ Error: OPENAI_API_KEY environment variable not set. Check your .env file.")
-        return
-        
-    print("🧠 Generating embeddings and building ChromaDB...")
+    """Generates embeddings using Ollama and saves them to Chroma."""
     
-    # OpenAIEmbeddings and ChatOpenAI are now imported directly from langchain_openai
-    embeddings = OpenAIEmbeddings()
+    print(f"🧠 Generating embeddings with {OLLAMA_EMBED_MODEL} and building ChromaDB...")
+    
+    # Use OllamaEmbeddings
+    embeddings = OllamaEmbeddings(model=OLLAMA_EMBED_MODEL)
     
     vector_store = Chroma.from_documents(
         documents=chunks,
@@ -67,6 +74,11 @@ def main():
         print("Please create it and place your project code inside (e.g., 'my_project_code/main.py').")
         return
 
+    print("---")
+    print("Make sure Ollama is running and you have pulled the embedding model:")
+    print(f"ollama pull {OLLAMA_EMBED_MODEL}")
+    print("---")
+    
     documents = load_documents(SOURCE_DIRECTORY)
     if documents:
         chunks = split_text(documents)

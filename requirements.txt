@@ -1,9 +1,10 @@
-# Core LangChain Framework (Major version update for stability/features)
 langchain==1.0.3
 langchain-community==0.4.1
-langchain-openai==1.0.1
+langchain-text-splitters==1.0.0
+langchain-ollama==1.0.0
+langchain-chroma==1.0.0
 
-# Vector Store (Latest stable version of ChromaDB)
+# Vector Store
 chromadb==1.3.0
 
 # Web Interface and Configuration

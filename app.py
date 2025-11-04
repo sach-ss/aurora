@@ -38,8 +38,9 @@ try:
                 gr.ChatInterface(
                     fn=query_agent,
                     examples=[
-                        "What is the function of the vector_store in the app?",
-                        "Explain the purpose of the function 'create_database' in data_ingestion.py",
+                        "What is the overall architecture of this project?",
+                        "Explain the purpose of the main function in the entrypoint file.",
+                        "How is database connectivity handled in this application?",
                     ],
                     type="messages"
                 )

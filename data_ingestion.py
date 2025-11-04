@@ -27,10 +27,15 @@ def load_documents(directory: str):
         loader_cls=TextLoader,
         loader_kwargs={"encoding": "utf-8"}, 
         exclude=[
-            "**/*.md", "**/*.txt", "**/*.log", 
-            "**/*.jpg", "**/*.jpeg", "**/*.png",
-            "**/*.pyc",  # Exclude compiled Python bytecode
-            "**/__pycache__/**" # Exclude all files in cache directories
+            "**/.*",              # Exclude hidden files and directories (e.g., .git, .vscode)
+            "**/*.md", "**/*.txt", "**/*.log", "**/*.json", "**/*.lock",
+            "**/*.jpg", "**/*.jpeg", "**/*.png", "**/*.gif", "**/*.svg",
+            # Common dependency and build artifact directories
+            "**/node_modules/**", # JavaScript
+            "**/__pycache__/**", # Python
+            "**/target/**",       # Java/Rust
+            "**/build/**",        # C++/CMake/Gradle
+            "**/dist/**",         # Python/JavaScript
         ]
         # ---------------------------------------------
     )
@@ -39,15 +44,28 @@ def load_documents(directory: str):
     return documents
 
 def split_text(documents):
-    """Splits the loaded documents into smaller, manageable chunks."""
+    """Splits the loaded documents into chunks using language-specific separators."""
     print(f"✂️ Splitting documents into chunks...")
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP,
-        separators=["\n\n", "\n", " ", ""]
-    )
-    chunks = text_splitter.split_documents(documents)
-    print(f"✅ Created {len(chunks)} chunks.")
+    
+    # Mapping file extensions to languages supported by RecursiveCharacterTextSplitter
+    language_map = {
+        ".py": "python", ".js": "js", ".java": "java", ".c": "c", ".cpp": "cpp",
+        ".go": "go", ".rb": "ruby", ".rs": "rust", ".ts": "ts", ".html": "html",
+        ".md": "markdown", ".tex": "latex"
+    }
+
+    chunks = []
+    for doc in documents:
+        file_extension = os.path.splitext(doc.metadata.get("source", ""))[1]
+        language = language_map.get(file_extension)
+        
+        splitter = RecursiveCharacterTextSplitter.from_language(
+            language=language, chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
+        ) if language else RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+        
+        chunks.extend(splitter.split_documents([doc]))
+
+    print(f"✅ Created {len(chunks)} chunks from {len(documents)} documents.")
     return chunks
 
 def create_database(chunks):

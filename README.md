@@ -108,7 +108,7 @@ Open either in your browser to chat with your code! 🧠
 ---
 
 ## 🧠 Tech Stack  
-- **Backend:** Python, LangChain, FAISS, Ollama  
+- **Backend:** Python, LangChain, ChromaDB, Ollama  
 - **Frontend:** Gradio  
 - **Embeddings:** Nomic Embed  
 - **LLM:** Gemma 2B  

@@ -1,0 +1,11 @@
+# config.yaml
+# Application-specific configuration for the RAG agent.
+
+# Text splitting parameters for data ingestion
+text_splitter:
+  chunk_size: 1000
+  chunk_overlap: 200
+
+# Retriever configuration for the agent
+retriever:
+  search_k: 20

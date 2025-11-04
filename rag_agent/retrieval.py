@@ -1,57 +1,88 @@
 
 import os
 import yaml
+from dotenv import load_dotenv
 from typing import List, Tuple
 from langchain_ollama import ChatOllama
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.runnables import RunnableLambda
+from langchain_core.output_parsers import StrOutputParser
 
 PROMPT_FILE = os.path.join(os.path.dirname(__file__), '..', 'prompts.yaml')
-VECTOR_STORE_PATH = "vector_store"
-OLLAMA_CHAT_MODEL = "gemma:2b" # <-- Switched to Gemma 2B
-OLLAMA_EMBED_MODEL = "nomic-embed-text" # Local embedding model
-
-
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), '..', 'config.yaml')
 
 class CodeRetrievalAgent:
     def __init__(self):
-        # Load Prompts
+        # Load environment variables from .env file
+        load_dotenv()
+
+        # Load Configs and Prompts
+        with open(CONFIG_FILE, 'r') as f:
+            self.config = yaml.safe_load(f)
         self.prompts = self._load_prompts()
 
         # Initialize LLM and Embeddings (using Ollama)
         print("🤖 Initializing Ollama models...")
+        OLLAMA_CHAT_MODEL = os.getenv("OLLAMA_CHAT_MODEL")
+        OLLAMA_EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL")
         self.llm = ChatOllama(model=OLLAMA_CHAT_MODEL, temperature=0)
         self.embeddings = OllamaEmbeddings(model=OLLAMA_EMBED_MODEL)
 
         # Initialize Vector Store and Retriever
+        VECTOR_STORE_PATH = os.getenv("VECTOR_STORE_PATH")
         if not os.path.exists(VECTOR_STORE_PATH):
             raise FileNotFoundError(f"Vector store not found at '{VECTOR_STORE_PATH}'. Please run data_ingestion.py first.")
         self.vector_store = Chroma(
             persist_directory=VECTOR_STORE_PATH,
             embedding_function=self.embeddings
         )
-        self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 50})
+        retriever_k = self.config['retriever']['search_k']
+        self.retriever = self.vector_store.as_retriever(search_kwargs={"k": retriever_k})
 
-        # Define the LCEL RAG chain
-        prompt = ChatPromptTemplate.from_template(
-            self.prompts.get('retrieval_prompt', "Answer the following question using the provided context.\n\nContext:\n{context}\n\nQuestion: {input}")
+        # 1. Define prompt for condensing question
+        condense_question_prompt = PromptTemplate.from_template(
+            self.prompts.get('condense_question_prompt_template')
         )
-        self.qa_chain = (
-            {
-                "input": RunnablePassthrough(),
-                "context": (lambda x: x["input"]) | self.retriever | (lambda docs: "\n\n".join([doc.page_content for doc in docs]))
-            }
-            | prompt
+
+        # 2. Define prompt for answering with context
+        answer_prompt = ChatPromptTemplate.from_template(
+            self.prompts.get('retrieval_prompt_template_with_history')
+        )
+
+        # 3. Chain to condense question based on history
+        standalone_question_chain = (
+            condense_question_prompt
             | self.llm
+            | StrOutputParser()
         )
 
-        # Mermaid chain for dependency graph
-        self.mermaid_prompt = PromptTemplate.from_template(
-            self.prompts.get('mermaid_prompt_template', "")
+        def log_and_get_docs(question):
+            print(f"\n--- 1. STANDALONE QUESTION ---\n{question}\n")
+            docs = self.retriever.invoke(question)
+            print(f"--- 2. RETRIEVED {len(docs)} DOCUMENTS ---")
+            return docs
+
+        def format_and_log_context(docs):
+            context = "\n\n".join([doc.page_content for doc in docs])
+            print(f"--- 3. FINAL CONTEXT FOR LLM ---\n{context[:500]}...\n")
+            return context
+
+        # 4. Full conversational RAG chain
+        # This single chain now handles everything from history to final answer.
+        self.conversational_qa_chain = (
+            {
+                "context": standalone_question_chain 
+                           | RunnableLambda(log_and_get_docs) 
+                           | RunnableLambda(format_and_log_context),
+                "input": lambda x: x["input"] # Pass the original question through for the final prompt
+            }
+            | answer_prompt
+            | self.llm
+            | StrOutputParser()
         )
-        self.mermaid_chain = self.mermaid_prompt | self.llm
         print("✅ Agent ready.")
 
 
@@ -67,20 +98,21 @@ class CodeRetrievalAgent:
 
 
     def query(self, question: str, history: List[Tuple[str, str]]):
-        # For now, history is not used. You can extend this for chat memory.
-        result = self.qa_chain.invoke({"input": question})
-        answer = result.content if hasattr(result, 'content') else str(result)
-        return answer, []
+        # Gradio's ChatInterface with type="messages" passes a list of ChatMessage objects.
+        # We need to format this into the string expected by our condense_question_prompt.
+        chat_history_for_prompt = []
+        print("\n\n--- NEW QUERY RECEIVED ---")
+        print(f"Original Question: {question}")
+        for message in history:
+            if isinstance(message, HumanMessage):
+                chat_history_for_prompt.append(f"Human: {message.content}")
+            elif isinstance(message, AIMessage):
+                chat_history_for_prompt.append(f"AI: {message.content}")
 
-
-    def generate_graph_mermaid(self):
-        """Generates a dependency graph in Mermaid syntax using the LLM."""
-        print(f"Generating Mermaid dependency graph...")
-        
-        all_docs = self.vector_store.similarity_search(query="function class module", k=50)
-        context_text = "\n---\n".join([doc.page_content for doc in all_docs])
-
-        response = self.mermaid_chain.invoke({"context": context_text})
-        mermaid_string = response.content
-        print(f"Mermaid dependency graph raw output:\n"+mermaid_string)
-        return mermaid_string
+        # Invoke the single, efficient chain.
+        answer = self.conversational_qa_chain.invoke({
+            "input": question,
+            "chat_history": "\n".join(chat_history_for_prompt)
+        })
+        print(f"--- 4. FINAL ANSWER ---\n{answer}\n")
+        return answer

@@ -17,7 +17,7 @@ try:
         
         try:
             # Call the agent's query method
-            answer, sources = agent.query(message, history)
+            answer = agent.query(message, history)
         except ValueError as e:
             # Handle the common Ollama memory error gracefully
             if "unable to load full model on GPU" in str(e):
@@ -26,45 +26,9 @@ try:
         except Exception as e:
             return f"❌ An unexpected error occurred: {e}"
 
-        response = answer
-        
-        if sources:
-            response += "\n\n---\n"
-            response += "### 📚 Relevant Code Context\n"
-            
-            # 1. Group sources by filename for clear presentation
-            source_map = {}
-            for doc in sources:
-                source_file = doc.metadata.get('source', 'N/A')
-                # Extract line number if available (e.g., from TextLoader)
-                start_line = doc.metadata.get('lines', {}).get('from', 'Unknown')
-                
-                # Clean up the path for display
-                clean_path = source_file.replace('./my_project_code/', '')
-                
-                # Use the start_line as the key for uniqueness within the file
-                source_key = (clean_path, start_line)
-                
-                if source_key not in source_map:
-                    source_map[source_key] = doc.page_content
+        return answer
 
-            # 2. Format the sources into a Markdown list
-            for (file_name, line), content in source_map.items():
-                response += f"**File:** `{file_name}` (Line {line})\n"
-                
-                # Use a Markdown blockquote to display the snippet
-                # Clean up content by stripping leading/trailing whitespace and tabs
-                snippet = content.strip()
-                response += f"> ```python\n> {snippet}\n> ```\n\n"
-                
-        return response
-
-    # 3. Define the graph function
-    def render_graph():
-        mermaid_code = agent.generate_graph_mermaid()
-        return mermaid_code
-
-    # 4. Create the Gradio App with gr.Blocks and Tabs
+    # 3. Create the Gradio App with gr.Blocks and Tabs
     with gr.Blocks(theme="soft", title="🤖 Code Partner AI") as demo:
         gr.Markdown("# 🤖 Code Partner AI (Local Gemma 2B Edition)")
         
@@ -79,15 +43,6 @@ try:
                     ],
                     type="messages"
                 )
-            
-            # Dependency Graph Tab
-            with gr.TabItem("Dependency Graph"):
-                with gr.Column():
-                    gr.Markdown("Click the button to generate and display the code dependency graph.")
-                    graph_btn = gr.Button("🚀 Generate Graph")
-                    graph_output = gr.Markdown(label="Generated Graph")
-                
-                graph_btn.click(fn=render_graph, inputs=None, outputs=graph_output)
 
     # Launch the app!
     print("\n---")

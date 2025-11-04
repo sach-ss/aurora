@@ -25,18 +25,3 @@ condense_question_prompt_template: |
   {input}
   
   Standalone Question:
-
-mermaid_prompt_template: |
-  Based on all the provided code context, analyze the dependencies between functions, modules, and classes.
-  Generate a dependency graph in Mermaid syntax.
-  Use `graph TD;` for a top-down flow.
-  
-  Example:
-  graph TD;
-      ModuleA[Module A] --> FunctionB[Function B];
-      ModuleA --> ClassC[Class C];
-  
-  CONTEXT:
-  {context}
-
-  MERMAID_SYNTAX:

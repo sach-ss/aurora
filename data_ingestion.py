@@ -1,18 +1,22 @@
 import os
+import yaml
+import shutil
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 from dotenv import load_dotenv
 
+# --- Configuration Loading ---
 load_dotenv()
+with open("config.yaml", 'r') as f:
+    config = yaml.safe_load(f)
 
-# --- Configuration ---
-SOURCE_DIRECTORY = "./my_project_code" # Folder containing your source code
-CHROMA_PATH = "vector_store"
-OLLAMA_EMBED_MODEL = "nomic-embed-text" # Local embedding model
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200 
+SOURCE_DIRECTORY = os.getenv("SOURCE_DIRECTORY")
+CHROMA_PATH = os.getenv("VECTOR_STORE_PATH")
+OLLAMA_EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL")
+CHUNK_SIZE = config['text_splitter']['chunk_size']
+CHUNK_OVERLAP = config['text_splitter']['chunk_overlap']
 
 def load_documents(directory: str):
     """Loads all text documents (including code) from the specified directory."""
@@ -21,10 +25,7 @@ def load_documents(directory: str):
         path=directory, 
         glob="**/*.*", 
         loader_cls=TextLoader,
-        # --- CRITICAL FIX: Specify UTF-8 Encoding ---
         loader_kwargs={"encoding": "utf-8"}, 
-        # ---------------------------------------------
-        # --- CRITICAL FIX: Exclude binary and cache files ---
         exclude=[
             "**/*.md", "**/*.txt", "**/*.log", 
             "**/*.jpg", "**/*.jpeg", "**/*.png",
@@ -72,6 +73,12 @@ def main():
         print(f"❌ Error: Source directory '{SOURCE_DIRECTORY}' not found.")
         print("Please create it and place your project code inside (e.g., 'my_project_code/main.py').")
         return
+
+    # If the database already exists, delete it to ensure a fresh start
+    if os.path.exists(CHROMA_PATH):
+        print(f"⚠️ Found existing ChromaDB at '{CHROMA_PATH}'. Deleting it to re-ingest data.")
+        shutil.rmtree(CHROMA_PATH)
+        print(f"✅ Deleted existing database.")
 
     print("---")
     print("Make sure Ollama is running and you have pulled the embedding model:")

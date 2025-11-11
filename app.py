@@ -109,6 +109,8 @@ def ingest_files(directory_path):
                 '.java': 'text/x-java-source',
                 '.js': 'text/javascript',
                 '.ts': 'text/typescript',
+                '.yaml': 'text/plain',
+                '.yml': 'text/plain',
                 # Add other file types here as needed
             }
             
@@ -161,29 +163,37 @@ def delete_store():
     
     return f"{deleted_message}\n{recreate_message}"
 
-def chat_fn(message, history):
+def chat_fn(message, history, chat_session):
     """
     Handles the chat interaction, using the file search store as a tool.
     """
-    # Use the file search store as a tool
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=message,
-        config=types.GenerateContentConfig(
+    if not chat_session:
+        print("--- Starting New Chat Session ---")
+        chat_session = None # Ensure any previous session object is discarded
+        # Configure the tools for the chat session
+        tool_config = types.GenerateContentConfig(
             tools=[
                 types.Tool(
                     file_search=types.FileSearch(
                         file_search_store_names=[store.name]
                     )
                 )
-            ]
+            ],
+            system_instruction=PROMPTS.get("chat_prompt")
         )
-    )
+        # Start a chat session with the tool config
+        chat_session = client.chats.create(
+            model="gemini-2.5-flash", 
+            config=tool_config
+        )
 
+    # Send the user's message to the existing chat session
+    response = chat_session.send_message(message)
     response_text = response.text
     
     # Add citations from grounding metadata
     try:
+        # Grounding metadata is nested in the first candidate
         grounding = response.candidates[0].grounding_metadata
         if grounding and grounding.grounding_chunks:
             sources = {chunk.retrieved_context.title for chunk in grounding.grounding_chunks}
@@ -191,10 +201,10 @@ def chat_fn(message, history):
                 citations = "\n\n**Sources:**\n" + "\n".join(f"- `{source}`" for source in sorted(list(sources)))
                 response_text += citations
     except (AttributeError, IndexError):
-        # This can happen if there are no candidates or no grounding metadata
+        # This can happen if there are no candidates or no grounding metadata.
         pass
 
-    return response_text
+    return response_text, chat_session
 
 # --- Gradio UI ---
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
@@ -224,14 +234,21 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     with gr.Tab("Chat"):
         gr.Markdown("## Step 2: Chat With Your Codebase")
         gr.Markdown("Ask questions about your code. For example: 'What does the `ingest_files` function do?' or 'Where is the Gemini API key configured?'")
-        gr.ChatInterface(
+        
+        # State to hold the chat session object across turns
+        chat_session_state = gr.State(None)
+        
+        chatbot = gr.Chatbot(height=600, type="messages", label="Chat with Aurora")
+        chat_interface = gr.ChatInterface(
             fn=chat_fn,
             type="messages",
-            chatbot=gr.Chatbot(height=600, type="messages"),
+            chatbot=chatbot,
+            additional_inputs=[chat_session_state],
+            additional_outputs=[chat_session_state],
             examples=[
-                "Summarize the purpose of the main application file.",
-                "What are the main dependencies in requirements.txt?",
-                "Explain the `chat_fn` function and its parameters.",
+                ["Summarize the purpose of the main application file."],
+                ["What are the main dependencies in requirements.txt?"],
+                ["Explain the `chat_fn` function and its parameters."],
             ]
         )
 

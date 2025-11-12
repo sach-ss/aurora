@@ -100,6 +100,7 @@ Open either in your browser.
 ```
 aurora/
 ├── .env                    # <-- Local environment configuration (created from example)
+├── config.yaml             # <-- Application-wide configuration (e.g., store name, ignored dirs)
 ├── .env.example
 ├── .gitignore
 ├── app.py                  # <-- Main application entrypoint
@@ -127,4 +128,3 @@ This project is licensed under the **Apache License 2.0**. See the `LICENSE` fil
 ---
 
 > 💡 *“Aurora turns your codebase into a conversational partner — analyze, query, and explore your projects with the power of Gemini.”*
-

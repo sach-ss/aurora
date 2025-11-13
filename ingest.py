@@ -36,10 +36,15 @@ def ingest_files(directory_path, client, store, config):
     # Find all files in the directory
     all_files = []
     ignored_dirs = config["ingestion"]["ignored_directories"]
+    ignored_files = config["ingestion"].get("ignored_files", [])
     for root, dirs, files in os.walk(directory_path):
         # Remove ignored directories from the search
         dirs[:] = [d for d in dirs if d not in ignored_dirs]
         for file in files:
+            if file.startswith('.'):
+                continue
+            if file in ignored_files:
+                continue
             all_files.append(os.path.join(root, file))
 
     if not all_files:
@@ -144,9 +149,14 @@ def build_knowledge_graph(directory_path, config):
     yield f"Scanning directory for graph construction: {directory_path}"
     python_files = []
     ignored_dirs = config["ingestion"]["ignored_directories"]
+    ignored_files = config["ingestion"].get("ignored_files", [])
     for root, dirs, files in os.walk(directory_path):
         dirs[:] = [d for d in dirs if d not in ignored_dirs]
         for file in files:
+            if file.startswith('.'):
+                continue
+            if file in ignored_files:
+                continue
             if file.endswith(".py"):
                 python_files.append(os.path.join(root, file))
 

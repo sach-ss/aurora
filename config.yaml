@@ -25,6 +25,10 @@ ingestion:
     - .idea
     - .vscode
     - .gradio
+  ignored_files:
+    - LICENSE
+    - knowledge_graph.json
+    - aurora_history.db
 mime_type_map:
   # Document Formats (Intelligent Document Parsing)
   .pdf: application/pdf

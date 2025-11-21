@@ -1,75 +1,76 @@
-# 🌌 Aurora  
-**Conversational RAG-based Coding Assistant for Impact Analysis**
+# 🌌 Aurora Codex
+**An Advanced Conversational Assistant for Codebase Impact Analysis**
 
 ---
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)](https://www.python.org/)
-[![Ollama](https://img.shields.io/badge/Ollama-Local_LLMs-black?logo=ollama)](https://ollama.com)
+[![Python](https://img.shields.io/badge/Python-3.12+-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Gemini](https://img.shields.io/badge/Gemini_API-Google-4285F4?logo=google)](https://ai.google.dev/)
 [![Gradio](https://img.shields.io/badge/Frontend-Gradio-orange?logo=gradio)](https://gradio.app)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Build-Passing-success.svg)]()
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-Aurora is a **local conversational RAG assistant** designed to perform **impact analysis** on codebases.  
-It uses **Ollama LLMs** (Gemma 2B + Nomic Embeddings) and **Gradio UI** to let you chat with your code locally — no cloud dependency.
+Aurora Codex is an advanced, conversational AI assistant designed to perform deep impact analysis on your codebases. It leverages the **Google Gemini API** for Retrieval-Augmented Generation (RAG) and Python's native **Abstract Syntax Tree (AST)** module for static code analysis. The entire experience is delivered through a clean and interactive **Gradio** web interface.
 
 ---
 
-## 🚀 Steps to Run Locally  
+## ✨ Key Features
 
-Follow these steps to get the application running on your PC.
-
----
-
-### 🧩 **Step 1: Install Ollama**  
-Go to [ollama.com](https://ollama.com) and download the application for Windows.  
-
-Run the installer — Ollama will start automatically in the background.
-
----
-
-### 🤖 **Step 2: Download the Local Models**  
-Open your terminal (Command Prompt or PowerShell).  
-
-Run the following commands to pull the models (Gemma 2B for chat, Nomic for embeddings):
-
-```bash
-ollama pull gemma:2b
-```
-
-```bash
-ollama pull nomic-embed-text
-```
+- **Conversational Code Analysis (RAG):** Ingest any codebase and start a conversation. Ask questions about functions, dependencies, and potential impacts in natural language.
+- **Static Knowledge Graph Generation:** Build a detailed structural map of your Python codebase. The tool uses AST to parse `.py` files, identify entities (functions, classes) and relationships (imports, calls), and saves this as a `knowledge_graph.json`.
+- **Advanced Impact Analysis:**
+  - **Criticality Assessment:** Request a prioritized analysis of impacted components, classified as High, Medium, or Low, with justifications for each.
+  - **Dynamic Dependency Visualization:** Generate on-the-fly dependency graphs using Mermaid.js based on your conversation to visually understand component relationships.
+- **Exportable Reports:** Download your entire impact analysis conversation as a structured Markdown report for documentation or sharing.
+- **Interactive UI:**
+  - A clean, themeable interface powered by Gradio.
+  - Collapsible sidebar to maximize chat space.
+  - Separate tabs for file ingestion, chat, and visualization.
 
 ---
 
-### 🗂️ **Step 3: Set Up Your Python Project**  
-Create your main project folder (e.g., `aurora`).  
-Copy all the project files into it.
+## 🚀 Steps to Run Locally
 
-**Configure your environment:**
-1.  Create a `.env` file by copying the example: `cp .env.example .env`.
-2.  (Optional) Adjust the model names or paths in `.env` if needed.
-3.  (Optional) Modify `config.yaml` to change chunking or retriever settings.
-
-```bash
-# For Windows (Command Prompt)
-copy .env.example .env
-```
- 
-> ⚠️ **Important:** Place the code files you want to analyze into the `my_project_code` folder.
+Follow these steps to get the application running.
 
 ---
 
-### 🧱 **Step 4: Install Python Dependencies**  
-Open your terminal in the project folder (`aurora`).  
+### 🧩 Step 1: Get a Google API Key
+1.  **Go to Google AI Studio:** Open your browser and navigate to [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey).
+2.  **Sign In:** Use your Google account to sign in.
+3.  **Create API Key:** Click the **"Create API key"** button. You may be prompted to create a new Google Cloud project; this is a standard step.
+4.  **Copy Your Key:** A window will appear with your new API key. Copy this key to your clipboard.
+
+> **⚠️ Important:** Treat your API key like a password. Never share it publicly or commit it to a Git repository.
+
+### 🗂️ Step 2: Set Up Your Project
+1.  Clone the repository from GitHub and navigate into the directory:
+    ```bash
+    git clone https://github.com/PushkarKashyap/aurora
+    cd aurora
+    ```
+
+2.  **Configure your environment:**
+    - Create a `.env` file by copying the example:
+      ```bash
+      # For Windows (Command Prompt)
+      copy .env.example .env
+      # For macOS/Linux
+      # cp .env.example .env
+      ```
+    - Open the new `.env` file and paste your Google API key from Step 1.
+
+---
+
+### 🧱 Step 3: Install Python Dependencies
+Open your terminal in the project folder (`aurora`).
 
 It’s recommended to use a Python virtual environment:
 
 ```bash
 python -m venv venv
-source venv/Scripts/activate
+venv\Scripts\activate  # On Windows
+# source venv/Scripts/activate  # On macOS/Linux
 ```
 
 Install all required dependencies:
@@ -80,74 +81,92 @@ pip install -r requirements.txt
 
 ---
 
-### 🧮 **Step 5: Ingest Your Code (Create Vector Store)**  
-Ensure Ollama is running in the background, then execute:
-
-```bash
-python data_ingestion.py
-```
-
-This reads your project files, generates embeddings, and stores them in the `vector_store` folder.  
-Run this again only if you **add or modify** files in `my_project_code`.
-
----
-
-### 💻 **Step 6: Run the Gradio App!**  
-Start the web interface with:
+### 💻 Step 4: Run the Gradio App
+Start the web interface.
 
 ```bash
 python app.py
 ```
 
-Your terminal will show:  
-- **Local URL:** `http://127.0.0.1:7860`  
-- **Public URL:** `https://xxxxx.gradio.live`  
+Your terminal will show:
+- **Local URL:** `http://127.0.0.1:7860`
+- **Public URL:** `https://xxxxx.gradio.live`
 
-Open either in your browser to chat with your code! 🧠
-
----
-
-## 🧠 Tech Stack  
-- **Backend:** Python, LangChain, ChromaDB, Ollama  
-- **Frontend:** Gradio  
-- **Embeddings:** Nomic Embed  
-- **LLM:** Gemma 2B  
+Open either in your browser.
 
 ---
 
-## 📂 Project Structure  
+### 🔎 Step 5: Analyze Your Codebase
+1.  **Ingest Files:** On the **"Ingest Codebase"** tab, provide the path to your local codebase and click **"Ingest Files"**. This creates a searchable index for the RAG functionality.
+2.  **Build Knowledge Graph:** Click **"Build Knowledge Graph"**. This performs a static analysis of all `.py` files and creates a `knowledge_graph.json` file. You can view the result by clicking **"View Graph"**.
+3.  **Chat & Analyze:** Switch to the **"Chat"** tab.
+    - Ask questions about your code's functionality and dependencies.
+    - Use the **"Assess Criticality"** checkbox for a deeper, prioritized analysis.
+    - After a conversation, click **"Visualize Impact"** to see a dependency diagram in the **"Visualization"** tab.
+    - Download your session as a report using the **"Generate Report"** button.
+
+---
+
+## ⚠️ Store Management
+
+Over time, you may create multiple file search stores in your Google AI account. A standalone script is provided to clean these up.
+
+To **delete all** file search stores associated with your API key, run the following command from your terminal:
+
+```bash
+python cleanup_stores.py
+```
+
+The script will ask for confirmation before proceeding with the deletion.
+
+---
+
+## 🧠 Tech Stack
+- **Backend:** Python, Google Gemini API
+- **Frontend:** Gradio
+- **LLM:** Gemini 2.5 Flash (default)
+
+---
+
+## 📂 Project Structure
 
 ```
 aurora/
-├── my_project_code/        # <-- Add your code to analyze here
-│   └── your_source_files.py
-├── rag_agent/
-│   └── retrieval.py
-├── vector_store/           # <-- Generated by data_ingestion.py
-│   └── ...
 ├── .env                    # <-- Local environment configuration (created from example)
+├── config.yaml             # <-- Application-wide configuration (e.g., store name, ignored dirs)
 ├── .env.example
 ├── .gitignore
 ├── app.py                  # <-- Main application entrypoint
-├── config.yaml             # <-- Application configuration
-├── data_ingestion.py       # <-- Script to process and store your code
+├── chat.py                 # <-- Core chat logic and database interactions
+├── ingest.py               # <-- File ingestion and indexing logic
 ├── prompts.yaml            # <-- All LLM prompts
 ├── requirements.txt
-└── README.md
+├── README.md
+├── .git/                   # <-- Git version control directory
+├── .gradio/                # <-- Gradio-related files (e.g., certificates)
+├── data/                   # <-- Directory for data files (if any)
+├── __pycache__/            # <-- Python cache files
+└── venv/                   # <-- Python virtual environment
 ```
 
 ---
 
-## 📜 License  
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+## 📝 Notes
+*   The file search store name (`display_name`) can be configured in `config.yaml`.
+*   The ingestion process in `ingest.py` processes files sequentially. For very large codebases, this might be slow.
+*   The chat history is stored in a local SQLite database, configured via `config.yaml`.
 
 ---
 
-## ✨ Acknowledgments  
-- [Ollama](https://ollama.com) for local LLM support  
-- [Nomic](https://nomic.ai) for open embeddings  
-- [Gradio](https://gradio.app) for the intuitive web interface  
+## 📜 License
+This project is licensed under the **Apache License 2.0**. See the `LICENSE` file for details.
 
 ---
 
-> 💡 *“Aurora turns your codebase into a conversational partner — analyze, query, and explore your projects with AI.”*
+## ✨ Acknowledgments
+- Google for the Gemini API
+- Gradio for the intuitive web interface
+
+---
+
+> 💡 *“Aurora turns your codebase into a conversational partner — analyze, query, and explore your projects with the power of Gemini.”*
